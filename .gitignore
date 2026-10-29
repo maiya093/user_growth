@@ -1,0 +1,8 @@
+*.pyc
+__pycache__/
+*.egg-info/
+.DS_Store
+node_modules/
+*.log
+.env
+site_config.json

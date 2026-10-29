@@ -1,0 +1,23 @@
+[project]
+name = "user_growth"
+authors = [{ name = "Interview Demo", email = "demo@example.com" }]
+description = "用户服务开通 / 中止单据 + 用户增长分析报表 + 用户增长数据大屏（Frappe v15 自定义 App）"
+requires-python = ">=3.10"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = []
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=15.0.0,<16.0.0"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "I", "UP", "B", "RUF"]
+ignore = ["B017", "B018", "B023", "B904", "E101", "E402", "E501", "F401", "RUF001"]

@@ -1,0 +1,32 @@
+app_name = "user_growth"
+app_title = "User Growth"
+app_publisher = "Interview Demo"
+app_description = "用户（租电客户）服务开通 / 中止单据 + 用户增长分析报表 + 用户增长数据大屏"
+app_email = "demo@example.com"
+app_license = "mit"
+app_version = "1.0.0"
+
+required_apps = []
+
+# 角色与工作区随 App 安装
+fixtures = [
+	{"dt": "Role", "filters": [["name", "in", ["Growth Operator", "Growth Manager"]]]},
+	"user_growth/fixtures/workspace.json",
+]
+
+# 安装后自动生成演示数据（幂等）
+after_install = "user_growth.setup.install.after_install"
+
+# 迁移后兜底：站点被清空也能恢复演示数据
+after_migrate = ["user_growth.setup.install.ensure_demo_data"]
+
+# 大屏页面的前端资源（Page 加载时自动引入，无需 Node 构建）
+page_js = {
+	"user-growth-dashboard": "public/js/user_growth_dashboard.js",
+}
+page_css = {
+	"user-growth-dashboard": "public/css/user_growth_dashboard.css",
+}
+
+# 允许通过 /api/method 直接调用（用于联调）
+override_whitelisted_methods = {}
