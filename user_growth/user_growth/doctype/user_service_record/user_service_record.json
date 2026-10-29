@@ -1,0 +1,333 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-10-29 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "record_type",
+  "customer_section",
+  "customer_name",
+  "customer_code",
+  "customer_type",
+  "column_break_customer",
+  "region",
+  "city",
+  "station",
+  "service_section",
+  "battery_model",
+  "battery_count",
+  "lease_term",
+  "column_break_service",
+  "monthly_fee",
+  "total_fee",
+  "source_channel",
+  "owner_sales",
+  "open_date",
+  "churn_section",
+  "churn_date",
+  "churn_type",
+  "churn_reason",
+  "column_break_churn",
+  "battery_returned",
+  "lifecycle_days",
+  "lost_mrr",
+  "remark_section",
+  "remark",
+  "status"
+ ],
+ "fields": [
+  {
+   "default": "USR-OPEN-.YYYY.-",
+   "description": "编号前綴与单据类型保持一致，避免中止单挂在 OPEN 系列下。",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "USR-OPEN-.YYYY.-\nUSR-CHRN-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "default": "服务开通",
+   "fieldname": "record_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "单据类型",
+   "options": "服务开通\n服务中止",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "customer_section",
+   "fieldtype": "Section Break",
+   "label": "客户信息"
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "客户名称",
+   "reqd": 1
+  },
+  {
+   "description": "客户唯一标识，同一客户多次开通/中止沿用同一编号，同时可作为外部业务系统 ID 的映射位。",
+   "fieldname": "customer_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "客户编号",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "快递网点",
+   "fieldname": "customer_type",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "客户类型",
+   "options": "快递网点\n外卖站点\n同城配送\n企业车队\n个人骑手",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_customer",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "华东",
+   "fieldname": "region",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "大区",
+   "options": "华东\n华南\n华中\n西南\n华北\n东北\n西北\n海外",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "杭州",
+   "fieldname": "city",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "城市",
+   "options": "杭州\n上海\n南京\n苏州\n宁波\n广州\n深圳\n东莞\n佛山\n曼谷\n吉隆坡",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "description": "如：杭州·拱墅万达柜（生产版建议改为 Link → 站点主数据）",
+   "fieldname": "station",
+   "fieldtype": "Data",
+   "label": "换电柜站点"
+  },
+  {
+   "fieldname": "service_section",
+   "fieldtype": "Section Break",
+   "label": "租电信息"
+  },
+  {
+   "default": "6030",
+   "description": "对应公司在售电池型号：48V30Ah / 60V30Ah / 60V45Ah",
+   "fieldname": "battery_model",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "电池型号",
+   "options": "4830\n6030\n6045",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "battery_count",
+   "fieldtype": "Int",
+   "label": "租电电池数",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "default": "月租",
+   "fieldname": "lease_term",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "租期类型",
+   "options": "月租\n季租\n年租",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_service",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "单块电池的月租金额（元/月）",
+   "fieldname": "monthly_fee",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "月租金额",
+   "non_negative": 1,
+   "options": "currency",
+   "reqd": 1
+  },
+  {
+   "description": "月租 × 租期月数 × 电池数",
+   "fieldname": "total_fee",
+   "fieldtype": "Currency",
+   "label": "合同期租金总额",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_channel",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "获客渠道",
+   "options": "网点直签\n渠道代理\n地推活动\n老客推荐\n平台合作",
+   "search_index": 1
+  },
+  {
+   "fieldname": "owner_sales",
+   "fieldtype": "Link",
+   "label": "招商 / 运营负责人",
+   "options": "User"
+  },
+  {
+   "fieldname": "open_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "开通日期",
+   "search_index": 1
+  },
+  {
+   "depends_on": "eval:doc.record_type=='服务中止'",
+   "fieldname": "churn_section",
+   "fieldtype": "Section Break",
+   "label": "中止信息"
+  },
+  {
+   "fieldname": "churn_date",
+   "fieldtype": "Date",
+   "label": "中止日期",
+   "search_index": 1
+  },
+  {
+   "depends_on": "eval:doc.record_type=='服务中止'",
+   "fieldname": "churn_type",
+   "fieldtype": "Select",
+   "label": "中止类型",
+   "options": "\n主动退租\n欠费停机\n到期未续\n站点合并\n客户停业"
+  },
+  {
+   "depends_on": "eval:doc.record_type=='服务中止'",
+   "fieldname": "churn_reason",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "中止原因",
+   "options": "\n单价过高\n续航不足\n站点太远\n电池老旧\n押金与结算纠纷\n车辆淘汰\n竞品更低\n客户停业\n其他",
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_churn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.record_type=='服务中止'",
+   "description": "换电业务的「流失」涉及实物回收，未归还的电池会计入报表中的资产异常指标。",
+   "fieldname": "battery_returned",
+   "fieldtype": "Check",
+   "label": "电池已归还入柜"
+  },
+  {
+   "fieldname": "lifecycle_days",
+   "fieldtype": "Int",
+   "label": "在租天数",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lost_mrr",
+   "fieldtype": "Currency",
+   "label": "中止月租损失",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remark_section",
+   "fieldtype": "Section Break",
+   "label": "备注"
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  },
+  {
+   "description": "由 docstatus 派生，不单独维护，避免状态与提交状态打架。",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "状态",
+   "options": "草稿\n已生效\n已取消",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-29 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "User Growth",
+ "name": "User Service Record",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Growth Operator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Growth Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "customer_name",
+ "track_changes": 1
+}
