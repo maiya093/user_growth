@@ -1,0 +1,135 @@
+[
+ {
+  "annotations": [],
+  "charts": [
+   {
+    "chart_name": "用户增长分析",
+    "chart_type": "Report",
+    "creation": "2026-10-29 10:00:00.000000",
+    "custom_options": "{\"type\": \"axis-mixed\", \"colors\": [\"#22D3EE\", \"#F87171\", \"#34D399\"]}",
+    "docstatus": 0,
+    "doctype": "Dashboard Chart",
+    "dynamic_filters_json": "{}",
+    "filters_json": "{}",
+    "group_by_type": "Count",
+    "idx": 0,
+    "is_public": 1,
+    "is_standard": 0,
+    "modified": "2026-10-29 10:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "User Growth",
+    "name": "用户增长分析",
+    "number_of_groups": 0,
+    "owner": "Administrator",
+    "report_name": "用户增长分析",
+    "roles": [],
+    "time_interval": "Yearly",
+    "timeseries": 0,
+    "timespan": "Last Year",
+    "type": "Bar",
+    "use_report_chart": 1,
+    "y_axis": []
+   }
+  ],
+  "content": "[{\"id\": \"ug_h1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>用户增长运营</b></span>\", \"col\": 12}}, {\"id\": \"ug_sc\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"新建服务开通\", \"col\": 4}}, {\"id\": \"ug_h2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h6\\\">快捷入口</span>\", \"col\": 12}}, {\"id\": \"ug_c1\", \"type\": \"card\", \"data\": {\"card_name\": \"服务记录\", \"col\": 6}}, {\"id\": \"ug_c2\", \"type\": \"card\", \"data\": {\"card_name\": \"分析与大屏\", \"col\": 6}}]",
+  "creation": "2026-10-29 10:00:00.000000",
+  "custom_blocks": [],
+  "docstatus": 0,
+  "doctype": "Workspace",
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "users",
+  "idx": 0,
+  "indicator_color": "green",
+  "is_hidden": 0,
+  "label": "用户增长",
+  "links": [
+   {
+    "hidden": 0,
+    "is_query_report": 0,
+    "label": "服务开通 / 中止",
+    "link_count": 0,
+    "onboard": 0,
+    "type": "Card Break"
+   },
+   {
+    "hidden": 0,
+    "is_query_report": 0,
+    "label": "User Service Record",
+    "link_count": 0,
+    "link_to": "User Service Record",
+    "link_type": "DocType",
+    "onboard": 1,
+    "type": "Link"
+   },
+   {
+    "hidden": 0,
+    "is_query_report": 0,
+    "label": "分析与大屏",
+    "link_count": 0,
+    "onboard": 0,
+    "type": "Card Break"
+   },
+   {
+    "hidden": 0,
+    "is_query_report": 1,
+    "label": "用户增长分析",
+    "link_count": 0,
+    "link_to": "User Growth Analysis",
+    "link_type": "Report",
+    "onboard": 1,
+    "type": "Link"
+   },
+   {
+    "hidden": 0,
+    "is_query_report": 0,
+    "label": "用户增长数据大屏",
+    "link_count": 0,
+    "link_to": "user-growth-dashboard",
+    "link_type": "Page",
+    "onboard": 0,
+    "type": "Link"
+   }
+  ],
+  "modified": "2026-10-29 10:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "User Growth",
+  "name": "用户增长",
+  "number_cards": [],
+  "owner": "Administrator",
+  "parent_page": "",
+  "public": 1,
+  "quick_lists": [],
+  "roles": [],
+  "sequence_id": 40.0,
+  "shortcuts": [
+   {
+    "color": "Grey",
+    "doc_view": "New",
+    "label": "新建服务开通",
+    "link_to": "User Service Record",
+    "type": "DocType"
+   },
+   {
+    "color": "Red",
+    "doc_view": "New",
+    "label": "新建服务中止",
+    "link_to": "User Service Record",
+    "type": "DocType"
+   },
+   {
+    "color": "Blue",
+    "label": "用户增长分析",
+    "link_to": "User Growth Analysis",
+    "type": "Report"
+   },
+   {
+    "color": "Green",
+    "label": "用户增长数据大屏",
+    "link_to": "user-growth-dashboard",
+    "type": "Page"
+   }
+  ],
+  "title": "用户增长"
+ }
+]
