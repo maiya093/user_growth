@@ -1,0 +1,32 @@
+# 可选：不装 bench 也能跑起来体验（首次约 5-10 分钟）
+services:
+  mariadb:
+    image: mariadb:10.6
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  redis:
+    image: redis:alpine
+    command: redis-server --appendonly yes
+
+  init:
+    image: frappe/bench:v15
+    depends_on: [mariadb, redis]
+    volumes:
+      - ..:/workspace
+    entrypoint: ["/bin/bash", "/workspace/docker/bootstrap.sh"]
+
+  frappe:
+    image: frappe/bench:v15
+    depends_on: [mariadb, redis]
+    volumes:
+      - ..:/workspace
+    ports:
+      - "8000:8000"
+    command: ["/bin/bash", "/workspace/docker/start.sh"]
+
+volumes:
+  mariadb_data:

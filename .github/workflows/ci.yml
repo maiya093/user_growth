@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        frappe-branch: [version-15]
+    services:
+      mariadb:
+        image: mariadb:10.6
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=10
+      redis:
+        image: redis:alpine
+        ports: ["6379:6379"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: apps/user_growth
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up bench
+        run: |
+          pip install frappe-bench
+          bench init --skip-redis-config-generation --frappe-branch ${{ matrix.frappe-branch }} ~/frappe-bench
+          cd ~/frappe-bench
+          bench set-config -g db_host 127.0.0.1
+          bench set-config -g redis_cache redis://127.0.0.1:6379/1
+          bench set-config -g redis_queue redis://127.0.0.1:6379/2
+          bench set-config -g redis_socketio redis://127.0.0.1:6379/3
+          ln -s "$GITHUB_WORKSPACE/apps/user_growth" apps/user_growth
+
+      - name: Install app
+        run: |
+          cd ~/frappe-bench
+          bench new-site test.local --mariadb-root-password root --admin-password admin
+          bench --site test.local install-app user_growth
+
+      - name: Run tests
+        run: |
+          cd ~/frappe-bench
+          bench --site test.local run-tests --app user_growth
