@@ -35,12 +35,11 @@ jobs:
           # Frappe v15 要求 utf8mb4，否则 bench new-site 直接失败
           MARIADB_AUTO_UPGRADE: "1"
         ports: ["3306:3306"]
-        # 直接以启动参数指定字符集与行格式，一次到位（无需事后 SET GLOBAL）
+        # 字符集由启动参数注入（--innodb-file-format/--innodb-large-prefix 在 10.6 已移除，
+        # 加上会导致容器启动失败，"Initialize containers" 步骤直接红）
         options: >-
           --character-set-server=utf8mb4
           --collation-server=utf8mb4_unicode_ci
-          --innodb-file-format=Barracuda
-          --innodb-large-prefix=1
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=5s --health-timeout=5s --health-retries=20
       redis:
@@ -53,11 +52,14 @@ jobs:
           --health-retries=20
 
     steps:
-      # 字符集已由容器启动参数注入，这里只做一次自检：建站失败时一眼看出是字符集还是别的原因
+      # 自检字符集：若此处不是 utf8mb4，后面建站必失败，直接提前终止省时间
       - name: Check MariaDB charset
         run: |
           mysql --host=127.0.0.1 --port=3306 --user=root --password=root \
             -e "SHOW VARIABLES LIKE 'character_set_server'; SHOW VARIABLES LIKE 'collation_server';"
+          mysql --host=127.0.0.1 --port=3306 --user=root --password=root \
+            -e "SELECT @@character_set_server" | grep -q utf8mb4 \
+            || { echo "::error::MariaDB 字符集不是 utf8mb4"; exit 1; }
 
       - uses: actions/checkout@v4
         with:
