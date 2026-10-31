@@ -25,7 +25,7 @@ USER frappe
 WORKDIR /home/frappe
 
 # 所有 github.com 的 git 请求（包括依赖里写死的 git+https）统一走 ghproxy 代理
-RUN git config --global url."https://ghproxy.net/https://github.com/".insteadOf "https://github.com/" \
+RUN git config --global url."https://gh-proxy.com/https://github.com/".insteadOf "https://github.com/" \
  && git config --global http.postBuffer 524288000 \
  && git config --global http.lowSpeedLimit 1000 \
  && git config --global http.lowSpeedTime 600
