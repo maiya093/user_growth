@@ -34,7 +34,7 @@
 cd ~/frappe-bench
 
 # 1. 拉取 App
-bench get-app https://github.com/<your-name>/user_growth.git
+bench get-app https://github.com/maiya093/user_growth.git
 
 # 2. 安装到站点（安装完成会自动生成 24 个月演示数据）
 bench --site your-site.local install-app user_growth

@@ -1,4 +1,4 @@
-# Copyright (c) 2026, Interview Demo and contributors
+# Copyright (c) 2026, maiya093 and contributors
 # For license information, please see license.txt
 
 """演示数据生成器。
@@ -195,7 +195,9 @@ def run(months=MONTHS, seed=SEED, clear=False, silent=False, **kwargs):
 	frappe.db.commit()
 	result = {"created_open": total_open, "created_churn": total_churn, "months": months, "seed": seed}
 	if not silent:
-		print(f"演示数据生成完成：开通 {total_open} 条，中止 {total_churn} 条（近 {months} 个月，seed={seed}）")
+		print(
+			f"演示数据生成完成：开通 {total_open} 条，中止 {total_churn} 条（近 {months} 个月，seed={seed}）"
+		)
 	return result
 
 

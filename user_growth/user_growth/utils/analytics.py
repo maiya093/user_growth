@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """用户增长聚合层 —— 全 App 唯一的指标出口。
 
 设计要点（面试可讲）：
@@ -277,7 +276,7 @@ def get_unreturned_battery(filters=None):
 		f"""SELECT COALESCE(SUM(battery_count), 0)
 		FROM `tabUser Service Record`
 		WHERE {where} AND record_type = %s AND IFNULL(battery_returned, 0) = 0""",
-		values + [CHURN],
+		[*values, CHURN],
 	)
 	return int(value[0][0]) if value else 0
 
@@ -293,14 +292,14 @@ def get_recent_events(limit=10, filters=None):
 		f"""SELECT {columns} FROM `tabUser Service Record`
 		WHERE {where} AND record_type = %s
 		ORDER BY open_date DESC, modified DESC LIMIT %s""",
-		values + [OPEN, limit],
+		[*values, OPEN, limit],
 		as_dict=True,
 	)
 	churns = frappe.db.sql(
 		f"""SELECT {columns} FROM `tabUser Service Record`
 		WHERE {where} AND record_type = %s
 		ORDER BY churn_date DESC, modified DESC LIMIT %s""",
-		values + [CHURN, limit],
+		[*values, CHURN, limit],
 		as_dict=True,
 	)
 

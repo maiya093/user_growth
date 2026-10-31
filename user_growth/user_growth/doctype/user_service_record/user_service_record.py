@@ -1,4 +1,4 @@
-# Copyright (c) 2026, Interview Demo and contributors
+# Copyright (c) 2026, maiya093 and contributors
 # For license information, please see license.txt
 
 import frappe

@@ -1,4 +1,4 @@
-# Copyright (c) 2026, Interview Demo and contributors
+# Copyright (c) 2026, maiya093 and contributors
 # For license information, please see license.txt
 
 """用户增长分析报表（Script Report）。
@@ -53,9 +53,27 @@ def get_columns(filters):
 		{"fieldname": "net", "label": _("净增长"), "fieldtype": "Int", "width": 100},
 		{"fieldname": "closing", "label": _("期末在租"), "fieldtype": "Int", "width": 100},
 		{"fieldname": "churn_rate", "label": _("中止率"), "fieldtype": "Percent", "width": 100},
-		{"fieldname": "new_fee", "label": _("新增月租"), "fieldtype": "Currency", "width": 120, "options": "currency"},
-		{"fieldname": "lost_fee", "label": _("中止月租"), "fieldtype": "Currency", "width": 120, "options": "currency"},
-		{"fieldname": "net_fee", "label": _("净月租"), "fieldtype": "Currency", "width": 120, "options": "currency"},
+		{
+			"fieldname": "new_fee",
+			"label": _("新增月租"),
+			"fieldtype": "Currency",
+			"width": 120,
+			"options": "currency",
+		},
+		{
+			"fieldname": "lost_fee",
+			"label": _("中止月租"),
+			"fieldtype": "Currency",
+			"width": 120,
+			"options": "currency",
+		},
+		{
+			"fieldname": "net_fee",
+			"label": _("净月租"),
+			"fieldtype": "Currency",
+			"width": 120,
+			"options": "currency",
+		},
 		{"fieldname": "new_battery", "label": _("新增电池(块)"), "fieldtype": "Int", "width": 110},
 		{"fieldname": "lost_battery", "label": _("回收电池(块)"), "fieldtype": "Int", "width": 120},
 		{"fieldname": "closing_battery", "label": _("在租电池(块)"), "fieldtype": "Int", "width": 120},

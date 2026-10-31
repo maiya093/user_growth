@@ -4,14 +4,28 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
-  lint-and-test:
+  lint:
+    name: Lint (ruff)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        frappe-branch: [version-15]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "ruff>=0.5"
+      - name: Ruff check
+        run: ruff check .
+      - name: Ruff format check
+        run: ruff format --check .
+
+  test:
+    name: Test (Frappe v15)
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 45
     services:
       mariadb:
         image: mariadb:10.6
@@ -20,15 +34,32 @@ jobs:
         ports: ["3306:3306"]
         options: >-
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
-          --health-interval=5s --health-timeout=5s --health-retries=10
+          --health-interval=5s --health-timeout=5s --health-retries=20
       redis:
         image: redis:alpine
         ports: ["6379:6379"]
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
 
     steps:
       - uses: actions/checkout@v4
         with:
           path: apps/user_growth
+
+      # 与本地开发环境对齐：MariaDB 必须为 utf8mb4 + Barracuda，
+      # 否则 Frappe 建站时会报 "Unknown character set" / 行长度超限
+      - name: Set up MariaDB charset
+        run: |
+          mysql --host=127.0.0.1 --port=3306 --user=root --password=root \
+            -e "SET GLOBAL character_set_server = 'utf8mb4';
+                SET GLOBAL collation_server = 'utf8mb4_unicode_ci';
+                SET GLOBAL innodb_file_format = 'Barracuda';
+                SET GLOBAL innodb_large_prefix = 1;"
+          mysql --host=127.0.0.1 --port=3306 --user=root --password=root \
+            -e "SHOW VARIABLES LIKE 'character_set_server'; SHOW VARIABLES LIKE 'collation_server';"
 
       - uses: actions/setup-python@v5
         with:
@@ -38,24 +69,62 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Set up bench
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/yarn
+          key: ${{ runner.os }}-v15-${{ hashFiles('pyproject.toml') }}
+
+      - name: Install bench
+        run: pip install frappe-bench
+
+      # --skip-assets：CI 只跑后端测试，跳过前端资源编译（最易超时的一步）
+      # --skip-redis-config-generation：不生成 supervisor 配置，直接用 service 里的 Redis
+      - name: Init bench
         run: |
-          pip install frappe-bench
-          bench init --skip-redis-config-generation --frappe-branch ${{ matrix.frappe-branch }} ~/frappe-bench
-          cd ~/frappe-bench
+          cd ~
+          bench init \
+            --frappe-branch version-15 \
+            --skip-assets \
+            --skip-redis-config-generation \
+            frappe-bench
+          cd frappe-bench
           bench set-config -g db_host 127.0.0.1
+          bench set-config -g db_port 3306
           bench set-config -g redis_cache redis://127.0.0.1:6379/1
           bench set-config -g redis_queue redis://127.0.0.1:6379/2
           bench set-config -g redis_socketio redis://127.0.0.1:6379/3
-          ln -s "$GITHUB_WORKSPACE/apps/user_growth" apps/user_growth
 
-      - name: Install app
+      # 不用 bench get-app（它要求仓库可 clone 且会改 pyproject），直接链入 checkout 结果
+      - name: Link app
+        run: |
+          cd ~/frappe-bench/apps
+          ln -s "$GITHUB_WORKSPACE/apps/user_growth" user_growth
+          ~/frappe-bench/env/bin/pip install -e user_growth
+
+      - name: Create site and install app
         run: |
           cd ~/frappe-bench
-          bench new-site test.local --mariadb-root-password root --admin-password admin
+          bench new-site test.local \
+            --db-host 127.0.0.1 \
+            --mariadb-root-password root \
+            --admin-password admin \
+            --no-mariadb-socket
           bench --site test.local install-app user_growth
 
       - name: Run tests
         run: |
           cd ~/frappe-bench
           bench --site test.local run-tests --app user_growth
+
+      # 失败时把日志直接抬到 CI 页面，省得再点进原始日志里翻
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          for f in ~/frappe-bench/logs/*.log ~/frappe-bench/sites/test.local/logs/*.log; do
+            [ -f "$f" ] || continue
+            echo "::group::$f"
+            tail -n 120 "$f"
+            echo "::endgroup::"
+          done

@@ -1,8 +1,8 @@
 app_name = "user_growth"
 app_title = "User Growth"
-app_publisher = "Interview Demo"
+app_publisher = "maiya093"
 app_description = "用户（租电客户）服务开通 / 中止单据 + 用户增长分析报表 + 用户增长数据大屏"
-app_email = "demo@example.com"
+app_email = "maiya093@users.noreply.github.com"
 app_license = "mit"
 app_version = "1.0.0"
 

@@ -1,0 +1,20 @@
+# 统一换行符，避免 Windows 检出时把 shell 脚本换成 CRLF（在 Linux / Docker 里会直接报错）
+* text=auto eol=lf
+
+*.py   text eol=lf diff=python
+*.json text eol=lf
+*.js   text eol=lf
+*.css  text eol=lf
+*.md   text eol=lf
+*.sh   text eol=lf
+*.yml  text eol=lf
+*.toml text eol=lf
+*.csv  text eol=lf
+
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.zip  binary
+
+# echarts 体积大且是第三方产物，diff 无意义
+user_growth/public/js/echarts.min.js linguist-vendored

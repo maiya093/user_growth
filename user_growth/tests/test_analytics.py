@@ -1,4 +1,4 @@
-# Copyright (c) 2026, Interview Demo and contributors
+# Copyright (c) 2026, maiya093 and contributors
 """聚合口径单元测试 —— 核心断言：期末在租 = 期初在租 + 新增 − 中止。
 
 运行方式（在 bench 目录下）：
@@ -118,7 +118,7 @@ class TestAnalytics(FrappeTestCase):
 			doc.insert(ignore_permissions=True)
 
 	def test_lifecycle_days(self):
-		doc = self._make("服务开通", "T009", "2025-01-10")
+		self._make("服务开通", "T009", "2025-01-10")
 		doc2 = frappe.get_doc(
 			{
 				"doctype": "User Service Record",
