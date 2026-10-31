@@ -20,12 +20,9 @@ after_install = "user_growth.setup.install.after_install"
 # 迁移后兜底：站点被清空也能恢复演示数据
 after_migrate = ["user_growth.setup.install.ensure_demo_data"]
 
-# 大屏页面的前端资源（Page 加载时自动引入，无需 Node 构建）
+# 大屏页面的前端资源（v15 仅有 page_js hook，JS 内联注入；CSS 由大屏 JS 动态注入）
 page_js = {
 	"user-growth-dashboard": "public/js/user_growth_dashboard.js",
-}
-page_css = {
-	"user-growth-dashboard": "public/css/user_growth_dashboard.css",
 }
 
 # 允许通过 /api/method 直接调用（用于联调）

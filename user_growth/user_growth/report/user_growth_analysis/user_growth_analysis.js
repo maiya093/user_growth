@@ -6,7 +6,7 @@
 // 2) 主图之外追加「中止原因 / 电池型号 / 城市 TOP」三张结构图；
 // 3) 顶部展示口径说明，并给净增长、中止率加颜色规则。
 
-frappe.query_reports["用户增长分析"] = {
+frappe.query_reports["User Growth Analysis"] = {
 	filters: [
 		{
 			fieldname: "months",

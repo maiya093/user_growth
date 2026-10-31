@@ -64,10 +64,10 @@ bench --site your-site.local execute user_growth.setup.demo_data.run \
 
 | 功能 | 路径 |
 | --- | --- |
-| 工作区 | `/app/user-growth` |
+| 工作区 | `/app/用户增长`（左侧栏「用户增长」，或全局搜索） |
 | 单据列表 | `/app/user-service-record` |
 | 报表 | `/app/query-report/User Growth Analysis` |
-| 大屏 | `/app/user-growth-dashboard`（点右上「全屏」或按 F11） |
+| 大屏 | `/app/user-growth-dashboard`（点右下「全屏」或按 F11） |
 
 ---
 
@@ -81,20 +81,23 @@ user_growth/
 │   │   │   ├── user_service_record.json     #   字段与权限
 │   │   │   ├── user_service_record.py       #   校验、派生字段、锁字段
 │   │   │   ├── user_service_record.js       #   参考价、在租天数预览、未归还提示
-│   │   │   └── user_service_record_list.js  #   列表状态色 + 未归还筛选
-│   │   ├── report/user_growth_report/       # ② 报表
-│   │   │   ├── user_growth_report.py        #   列 / 数据 / 指标卡 / 图表
-│   │   │   └── user_growth_report.js        #   过滤器 + 3 张附加结构图
+│   │   │   └── user_service_record_list.js  #   列表状态色 + 未归还标红
+│   │   ├── report/user_growth_analysis/     # ② 报表（标识 User Growth Analysis）
+│   │   │   ├── user_growth_analysis.py      #   列 / 数据 / 指标卡 / 图表
+│   │   │   └── user_growth_analysis.js      #   过滤器 + 3 张附加结构图
 │   │   ├── page/user_growth_dashboard/      # ③ 大屏（Page 定义）
-│   │   ├── workspace/user_growth/           # 工作区入口
 │   │   └── utils/analytics.py               # ★ 全 App 唯一聚合出口
+│   ├── fixtures/workspace.json              # 工作区（用户增长）随 App 安装
 │   ├── setup/demo_data.py                   # ★ 演示数据生成（固定种子 + 幂等）
-│   ├── setup/install.py                     # 安装钩子
-│   ├── public/js/user_growth_dashboard.js   # 大屏逻辑（ECharts + 刷新 + 缩放）
+│   ├── setup/install.py                     # 安装钩子（装完自动造数）
+│   ├── public/js/user_growth_dashboard.js   # 大屏逻辑（按需加载 ECharts + 刷新 + 缩放）
+│   ├── public/js/echarts.min.js             # ECharts 5（随 App 分发，内网离线可用）
 │   ├── public/css/user_growth_dashboard.css # 大屏样式（深色科技风）
-│   ├── tests/test_analytics.py              # 口径单元测试
+│   ├── tests/test_analytics.py              # 口径单元测试（8 个用例）
 │   └── hooks.py
 ├── docs/01-需求分析说明.md
+├── docs/screenshots/                        # 实机运行截图
+├── docker/                                  # 可选：Docker 一键起 MariaDB + Redis
 ├── pyproject.toml
 └── README.md
 ```
@@ -192,11 +195,12 @@ bench --site your-site.local run-tests --app user_growth
 
 ```
 install-app user_growth          → 成功，自动生成演示数据
-演示数据                          → 开通 1,551 条 / 中止 514 条 / 未归还电池 19 单（seed=20261029）
-报表 User Growth Analysis         → 12 行 × 13 列 + 10 张指标卡 + 主图，耗时 0.30s
-指标恒等式（期末=期初+新增−中止）  → 0 处违例
-大屏快照接口                      → 10 个区块数据，耗时 0.16s
+演示数据                          → 开通 1,551 条 / 中止 519 条 / 未归还电池 45 块（seed=20261029）
+报表 User Growth Analysis         → 12 行 × 13 列 + 10 张指标卡 + 主图 + 3 张结构图
+指标恒等式（期末=期初+新增−中止）  → 0 处违例（单元测试守护）
+大屏快照接口                      → 10 个区块数据，HTTP 实测正常
 单元测试                          → 8 passed
+浏览器实测                        → 大屏 8 区块渲染 / 报表图表与指标卡 / 列表状态标 / 表单校验截图见 docs/screenshots/
 ```
 
 ## 十、License

@@ -1,8 +1,38 @@
 // Copyright (c) 2026, Interview Demo and contributors
 // 用户增长数据大屏 —— 页面入口（Frappe Page 渲染时由 hooks.page_js 引入）
+//
+// ECharts 采用「同源静态资源 + 按需加载」：
+// 随 App 分发（public/js/echarts.min.js），不依赖外网 CDN，离线内网环境也能点亮大屏。
+
+const UG_ECHARTS_URL = "/assets/user_growth/js/echarts.min.js";
+const UG_CSS_URL = "/assets/user_growth/css/user_growth_dashboard.css";
+
+function ug_load_echarts() {
+	return new Promise((resolve, reject) => {
+		// v15 没有 page_css hook，样式在这里注入（幂等，重复进入页面不会重复加载）
+		if (!document.querySelector(`link[href="${UG_CSS_URL}"]`)) {
+			const link = document.createElement("link");
+			link.rel = "stylesheet";
+			link.href = UG_CSS_URL;
+			document.head.appendChild(link);
+		}
+		if (window.echarts) return resolve();
+		const el = document.createElement("script");
+		el.src = UG_ECHARTS_URL;
+		el.onload = resolve;
+		el.onerror = () => reject(new Error("ECharts 加载失败: " + UG_ECHARTS_URL));
+		document.head.appendChild(el);
+	});
+}
 
 frappe.pages["user-growth-dashboard"].on_page_load = function (wrapper) {
-	new UserGrowthDashboard(wrapper);
+	const $wrapper = typeof wrapper.jquery === "undefined" ? $(wrapper) : wrapper;
+	ug_load_echarts()
+		.then(() => new UserGrowthDashboard($wrapper))
+		.catch((err) => {
+			console.error(err);
+			frappe.msgprint({ title: "大屏初始化失败", message: err.message, indicator: "red" });
+		});
 };
 
 const UG_COLORS = ["#22D3EE", "#34D399", "#FBBF24", "#F87171", "#A78BFA", "#60A5FA", "#F472B6", "#4ADE80"];

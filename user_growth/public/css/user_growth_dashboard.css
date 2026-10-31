@@ -11,8 +11,10 @@
 	--ug-red: #f87171;
 	--ug-amber: #fbbf24;
 
-	position: relative;
-	width: 100%;
+	position: fixed;
+	inset: 0;
+	z-index: 1060;
+	width: 100vw;
 	height: 100vh;
 	overflow: hidden;
 	background: radial-gradient(1200px 700px at 50% -10%, #0b2a44 0%, var(--ug-bg) 60%, #02070d 100%);
