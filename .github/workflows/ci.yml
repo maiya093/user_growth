@@ -15,9 +15,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install "ruff>=0.5"
+      # 固定版本：不同 ruff 版本对 import 排序等规则判定不同，浮动版本会让 CI 随机红
+      - run: pip install "ruff==0.6.9"
       - name: Ruff check
-        run: ruff check .
+        run: ruff check . --output-format=github
       - name: Ruff format check
         run: ruff format --check .
 
@@ -31,8 +32,15 @@ jobs:
         image: mariadb:10.6
         env:
           MARIADB_ROOT_PASSWORD: root
+          # Frappe v15 要求 utf8mb4，否则 bench new-site 直接失败
+          MARIADB_AUTO_UPGRADE: "1"
         ports: ["3306:3306"]
+        # 直接以启动参数指定字符集与行格式，一次到位（无需事后 SET GLOBAL）
         options: >-
+          --character-set-server=utf8mb4
+          --collation-server=utf8mb4_unicode_ci
+          --innodb-file-format=Barracuda
+          --innodb-large-prefix=1
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=5s --health-timeout=5s --health-retries=20
       redis:
@@ -45,21 +53,15 @@ jobs:
           --health-retries=20
 
     steps:
+      # 字符集已由容器启动参数注入，这里只做一次自检：建站失败时一眼看出是字符集还是别的原因
+      - name: Check MariaDB charset
+        run: |
+          mysql --host=127.0.0.1 --port=3306 --user=root --password=root \
+            -e "SHOW VARIABLES LIKE 'character_set_server'; SHOW VARIABLES LIKE 'collation_server';"
+
       - uses: actions/checkout@v4
         with:
           path: apps/user_growth
-
-      # 与本地开发环境对齐：MariaDB 必须为 utf8mb4 + Barracuda，
-      # 否则 Frappe 建站时会报 "Unknown character set" / 行长度超限
-      - name: Set up MariaDB charset
-        run: |
-          mysql --host=127.0.0.1 --port=3306 --user=root --password=root \
-            -e "SET GLOBAL character_set_server = 'utf8mb4';
-                SET GLOBAL collation_server = 'utf8mb4_unicode_ci';
-                SET GLOBAL innodb_file_format = 'Barracuda';
-                SET GLOBAL innodb_large_prefix = 1;"
-          mysql --host=127.0.0.1 --port=3306 --user=root --password=root \
-            -e "SHOW VARIABLES LIKE 'character_set_server'; SHOW VARIABLES LIKE 'collation_server';"
 
       - uses: actions/setup-python@v5
         with:
