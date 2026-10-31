@@ -69,6 +69,19 @@ bench --site your-site.local execute user_growth.setup.demo_data.run \
 | 报表 | `/app/query-report/User Growth Analysis` |
 | 大屏 | `/app/user-growth-dashboard`（点右下「全屏」或按 F11） |
 
+### 不想装 bench？用 Docker 跑
+
+```bash
+git clone https://github.com/maiya093/user_growth.git
+cd user_growth/docker
+docker compose up -d mariadb redis
+docker compose build bench-base      # 构建 Frappe v15 镜像，约 10-15 分钟（只需一次）
+docker compose run --rm init         # 建站 + 安装 App + 生成演示数据
+docker compose up -d frappe          # 启动，访问 http://localhost:8000
+```
+
+账号 `Administrator` / `admin`。详细步骤与排错见 [`docker/README.md`](docker/README.md)。
+
 ---
 
 ## 三、目录结构
@@ -97,7 +110,7 @@ user_growth/
 │   └── hooks.py
 ├── docs/01-需求分析说明.md
 ├── docs/screenshots/                        # 实机运行截图
-├── docker/                                  # 可选：Docker 一键起 MariaDB + Redis
+├── docker/                                  # 可选：Docker 一键起完整环境（含 Dockerfile）
 ├── pyproject.toml
 └── README.md
 ```

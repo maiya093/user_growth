@@ -1,32 +1,95 @@
-# 可选：不装 bench 也能跑起来体验（首次约 5-10 分钟）
+# 可选：不装 bench 也能一键体验
+#
+# 镜像说明：使用你自己构建的镜像（由本目录 Dockerfile 生成，内部已完成 bench init）。
+# 构建一次约 10-15 分钟，之后可反复启动。
+#
+# 顺序（详见同目录 README.md）：
+#   docker compose up -d mariadb redis     # 起数据库与缓存
+#   docker compose run --rm init           # 建站 + 安装 App + 生成演示数据（只需一次）
+#   docker compose up -d frappe            # 启动 Web 服务
+#   浏览器打开 http://localhost:8000  （Administrator / admin）
+
+name: user_growth
+
 services:
+  # 一次性构建 bench 基础镜像（无需手动执行 docker build）
+  bench-base:
+    image: user_growth-bench:v15
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["true"]
+
   mariadb:
     image: mariadb:10.6
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MARIADB_ROOT_PASSWORD: root
     volumes:
       - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   redis:
     image: redis:alpine
     command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
+  # 一次性初始化容器：建站 + 安装 App + 生成演示数据。
+  # 成功后自动退出；重复执行会因站点已存在而报错，属正常现象（数据不会丢）。
   init:
-    image: frappe/bench:v15
-    depends_on: [mariadb, redis]
+    image: user_growth-bench:v15
+    depends_on:
+      bench-base:
+        condition: service_completed_successfully
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SITE_NAME: demo.local
+      DB_HOST: mariadb
+      DB_ROOT_PASSWORD: root
+      ADMIN_PASSWORD: admin
     volumes:
-      - ..:/workspace
+      # 仓库根目录挂到 /workspace（只读），脚本与 App 源码都从这里取；
+      # 不挂到 bench 目录上，避免把镜像自带的 Python 环境覆盖掉
+      - ..:/workspace:ro
+      # bench 的站点目录与 apps 目录持久化，供 frappe 服务复用
+      - bench_sites:/home/frappe/frappe-bench/sites
+      - bench_apps:/home/frappe/frappe-bench/apps
     entrypoint: ["/bin/bash", "/workspace/docker/bootstrap.sh"]
 
   frappe:
-    image: frappe/bench:v15
-    depends_on: [mariadb, redis]
+    image: user_growth-bench:v15
+    depends_on:
+      bench-base:
+        condition: service_completed_successfully
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      init:
+        condition: service_completed_successfully
+    environment:
+      SITE_NAME: demo.local
+      DB_HOST: mariadb
     volumes:
-      - ..:/workspace
+      - ..:/workspace:ro
+      - bench_sites:/home/frappe/frappe-bench/sites
+      - bench_apps:/home/frappe/frappe-bench/apps
     ports:
       - "8000:8000"
     command: ["/bin/bash", "/workspace/docker/start.sh"]
 
 volumes:
   mariadb_data:
+  bench_sites:
+  bench_apps:
