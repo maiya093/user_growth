@@ -24,22 +24,31 @@ RUN useradd -ms /bin/bash frappe \
 USER frappe
 WORKDIR /home/frappe
 
-# 所有 github.com 的 git 请求（包括依赖里写死的 git+https）统一走 ghproxy 代理
-RUN git config --global url."https://gh-proxy.com/https://github.com/".insteadOf "https://github.com/" \
- && git config --global http.postBuffer 524288000 \
- && git config --global http.lowSpeedLimit 1000 \
- && git config --global http.lowSpeedTime 600
+# Frappe v15 有两个依赖写死从 GitHub 拉特定 commit。
+# git 协议经代理转发不稳定，改用稳定得多的 tar 包下载，预置到本地。
+RUN mkdir -p /opt/vendor \
+ && curl -fsSL --retry 5 --retry-delay 3 -o /tmp/pypika.tar.gz \
+      "https://gh-proxy.com/https://github.com/frappe/pypika/archive/7ef6e40215d46cd531e8c4e58650b84c11abbd04.tar.gz" \
+ && curl -fsSL --retry 5 --retry-delay 3 -o /tmp/gunicorn.tar.gz \
+      "https://gh-proxy.com/https://github.com/frappe/gunicorn/archive/bb554053bb87218120d76ab6676af7015680e8b6.tar.gz" \
+ && tar xzf /tmp/pypika.tar.gz  -C /opt/vendor \
+ && tar xzf /tmp/gunicorn.tar.gz -C /opt/vendor \
+ && mv /opt/vendor/pypika-7ef6e40215d46cd531e8c4e58650b84c11abbd04  /opt/vendor/pypika \
+ && mv /opt/vendor/gunicorn-bb554053bb87218120d76ab6676af7015680e8b6 /opt/vendor/gunicorn \
+ && rm -f /tmp/*.tar.gz
 
-# pip 走清华源（bench CLI 本身用 pip 装）
-RUN mkdir -p /home/frappe/.config/pip \
- && printf '[global]\nindex-url = https://pypi.tuna.tsinghua.edu.cn/simple\ntrusted-host = pypi.tuna.tsinghua.edu.cn\ntimeout = 180\nretries = 10\n' > /home/frappe/.config/pip/pip.conf \
- && pip3 install --user --no-cache-dir frappe-bench==5.31.1
+RUN pip3 install --user --no-cache-dir frappe-bench==5.31.1
 
-# Frappe 源码从 Gitee 镜像克隆（实测有 version-15 分支且速度快）
+# 从 Gitee 镜像克隆 Frappe v15 源码
 RUN git clone --depth 1 --branch version-15 \
       https://gitee.com/mirrors/frappe.git /home/frappe/frappe-src
 
-# 用本地源码初始化 bench；依赖中的 GitHub git 包由上面的 insteadOf 自动走代理
+# 把 pyproject 里两个 git 依赖改写为本地路径，uv 安装时不再访问任何 GitHub
+RUN cd /home/frappe/frappe-src \
+ && sed -i 's@"PyPika @ git+https://github.com/frappe/pypika@7ef6e40215d46cd531e8c4e58650b84c11abbd04"@"PyPika @ file:///opt/vendor/pypika"@' pyproject.toml \
+ && sed -i 's@"gunicorn @ git+https://github.com/frappe/gunicorn@bb554053bb87218120d76ab6676af7015680e8b6"@"gunicorn @ file:///opt/vendor/gunicorn"@' pyproject.toml \
+ && grep -c "file:///opt/vendor" pyproject.toml
+
 RUN bench init --frappe-branch version-15 \
       --frappe-path /home/frappe/frappe-src \
       --skip-assets --skip-redis-config-generation frappe-bench \
