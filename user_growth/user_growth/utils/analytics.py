@@ -14,6 +14,9 @@ OPEN = "服务开通"
 CHURN = "服务中止"
 DOCTYPE = "User Service Record"
 
+# 型号代码 → 展示名（大屏动态条等文案使用）
+UG_MODEL_LABEL_SHORT = {"4830": "48V30Ah", "6030": "60V30Ah", "6045": "60V45Ah"}
+
 # 报表与大屏都允许的过滤器键（白名单，拼 SQL 前做校验）
 FILTER_KEYS = (
 	"region",
@@ -268,6 +271,45 @@ def get_battery_mix(filters=None, months=12, end_date=None):
 	return sorted([{"label": k, "value": v} for k, v in counter.items()], key=lambda x: x["label"])
 
 
+def get_battery_health_by_model(filters=None, months=12, end_date=None):
+	"""电池健康率按型号分布：期间中止电池中「已归还 / 未归还」的分型号拆解。
+
+	口径与大屏顶部健康率一致：只统计期间内中止（churn_date 落在窗口）的中止单，
+	归还率 = (中止电池 - 未归还电池) ÷ 中止电池，按 battery_model 分组。
+	"""
+	filters = normalize_filters(filters)
+	rows = _fetch_events(filters)
+	keys = build_month_series(months, end_date)
+	start, end = keys[0], keys[-1]
+
+	stats = {}
+	for row in rows:
+		if row.record_type != CHURN or not row.churn_date:
+			continue
+		key = _month_key(row.churn_date)
+		if not key or not (start <= key <= end):
+			continue
+		model = row.battery_model or "未填写"
+		item = stats.setdefault(model, {"total": 0, "unreturned": 0})
+		item["total"] += int(row.battery_count or 0)
+		if not int(row.battery_returned or 0):
+			item["unreturned"] += int(row.battery_count or 0)
+
+	result = []
+	for model, item in stats.items():
+		returned = item["total"] - item["unreturned"]
+		result.append(
+			{
+				"model": model,
+				"total": item["total"],
+				"returned": returned,
+				"unreturned": item["unreturned"],
+				"return_rate": round(returned / item["total"] * 100, 1) if item["total"] else None,
+			}
+		)
+	return sorted(result, key=lambda x: x["total"], reverse=True)
+
+
 def get_unreturned_battery(filters=None):
 	"""中止但电池未归还的电池块数 —— 资产管理红线。"""
 	filters = normalize_filters(filters)
@@ -286,7 +328,7 @@ def get_recent_events(limit=10, filters=None):
 	filters = normalize_filters(filters)
 	where, values = _where_sql(filters)
 	columns = """record_type, customer_name, city, battery_model, monthly_fee,
-		battery_count, open_date, churn_date, churn_reason"""
+		battery_count, battery_returned, open_date, churn_date, churn_reason"""
 
 	opens = frappe.db.sql(
 		f"""SELECT {columns} FROM `tabUser Service Record`
@@ -305,26 +347,30 @@ def get_recent_events(limit=10, filters=None):
 
 	events = []
 	for row in opens:
+		count = int(row.battery_count or 1)
 		events.append(
 			{
-				"type": "开通",
+				"type": "借电",
 				"tag": "new",
 				"customer": mask_name(row.customer_name),
 				"city": row.city,
 				"battery_model": row.battery_model,
-				"text": f"{mask_name(row.customer_name)} · {row.city} · {row.battery_model} × {int(row.battery_count or 1)}",
+				"text": f"{mask_name(row.customer_name)} · {row.city} · 借出 {UG_MODEL_LABEL_SHORT.get(row.battery_model, row.battery_model)} × {count} 块",
 				"date": str(row.open_date or ""),
 			}
 		)
 	for row in churns:
+		count = int(row.battery_count or 1)
+		returned = int(row.battery_returned or 0)
+		state = f"归还 {count} 块" if returned else f"未归还 {count} 块"
 		events.append(
 			{
-				"type": "中止",
-				"tag": "churn",
+				"type": "归还",
+				"tag": "new" if returned else "churn",
 				"customer": mask_name(row.customer_name),
 				"city": row.city,
 				"battery_model": row.battery_model,
-				"text": f"{mask_name(row.customer_name)} · {row.city} · {row.churn_reason or '未填写'}",
+				"text": f"{mask_name(row.customer_name)} · {row.city} · {state}（套餐中止）",
 				"date": str(row.churn_date or ""),
 			}
 		)
@@ -358,6 +404,31 @@ def get_dashboard_snapshot(months=12, region=None):
 	totals = get_totals(summary)
 	last = summary[-1] if summary else None
 
+	period_lost_battery = sum(int(t.get("lost_battery") or 0) for t in summary)
+	unreturned = get_unreturned_battery(filters)
+	# 电池健康率 = 已归还 ÷ 应归还（期间中止电池）；没有中止样本时返回 None，前端显示 —
+	battery_return_rate = (
+		round((period_lost_battery - unreturned) / period_lost_battery * 100, 1)
+		if period_lost_battery
+		else None
+	)
+
+	# ---- 用户生命周期指标（参考「产品设计师要了解的数据指标」口径） ----
+	# ARPU：在租客户月均贡献收入 = 期末月租总额 ÷ 期末在租客户
+	closing = last["closing"] if last else 0
+	closing_fee = last["closing_fee"] if last else 0
+	arpu = round(closing_fee / closing, 1) if closing else None
+	# 流失率（期间）：期间中止客户 ÷ 期初在租客户
+	period_churn_rate = round(totals["churn"] / totals["opening"] * 100, 2) if totals["opening"] else None
+	# 复购率：开通过 ≥2 次的客户 ÷ 有过开通行为的客户（换电/扩容/再次开通都算复购）
+	open_counts = {}
+	for row in _fetch_events(filters):
+		if row.record_type == OPEN and row.customer_code:
+			open_counts[row.customer_code] = open_counts.get(row.customer_code, 0) + 1
+	total_customers = len(open_counts)
+	repeat_customers = sum(1 for c in open_counts.values() if c >= 2)
+	repeat_rate = round(repeat_customers / total_customers * 100, 1) if total_customers else None
+
 	return {
 		"generated_at": now_datetime().strftime("%Y-%m-%d %H:%M:%S"),
 		"months": months,
@@ -372,12 +443,20 @@ def get_dashboard_snapshot(months=12, region=None):
 			"period_new": totals["new"],
 			"period_churn": totals["churn"],
 			"period_net": totals["net"],
-			"unreturned_battery": get_unreturned_battery(filters),
+			"unreturned_battery": unreturned,
+			"period_lost_battery": period_lost_battery,
+			"battery_return_rate": battery_return_rate,
+			"arpu": arpu,
+			"period_churn_rate": period_churn_rate,
+			"repeat_rate": repeat_rate,
+			"repeat_customers": repeat_customers,
+			"total_customers": total_customers,
 		},
 		"trend": summary,
 		"reason_breakdown": get_breakdown("churn_reason", filters, months, record_type=CHURN)[:8],
 		"city_rank": get_breakdown("city", filters, months, record_type=OPEN)[:8],
 		"battery_mix": get_battery_mix(filters, months),
+		"battery_health_by_model": get_battery_health_by_model(filters, months),
 		"channel_rank": get_breakdown("source_channel", filters, months, record_type=OPEN)[:6],
 		"customer_type_rank": get_breakdown("customer_type", filters, months, record_type=OPEN)[:6],
 		"recent_events": get_recent_events(10, filters),

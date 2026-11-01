@@ -78,7 +78,7 @@ class UserGrowthDashboard {
 					</div>
 				</header>
 
-				<section class="ug-kpi-row" id="ug-kpi-row"></section>
+				<section class="ug-kpi-groups" id="ug-kpi-row"></section>
 
 				<section class="ug-main">
 					<div class="ug-col">
@@ -97,8 +97,8 @@ class UserGrowthDashboard {
 							<div class="ug-chart" id="chart-battery"></div>
 						</div>
 						<div class="ug-card">
-							<div class="ug-card-title">中止率健康度<span class="ug-card-desc">当期 ÷ 期初在租</span></div>
-							<div class="ug-chart" id="chart-ring"></div>
+							<div class="ug-card-title">电池健康率<span class="ug-card-desc">已归还 ÷ 应归还 · 按型号分布</span></div>
+							<div class="ug-health" id="health-dist"></div>
 						</div>
 					</div>
 					<div class="ug-col">
@@ -116,7 +116,7 @@ class UserGrowthDashboard {
 				<section class="ug-footer">
 					<div class="ug-live">
 						<span class="ug-live-dot"></span>
-						<span class="ug-live-label">实时动态</span>
+						<span class="ug-live-label">最新借电动态</span>
 						<div class="ug-ticker" id="ug-ticker"></div>
 					</div>
 					<div class="ug-refresh">
@@ -249,7 +249,7 @@ class UserGrowthDashboard {
 		this.render_reason(data.reason_breakdown);
 		this.render_city(data.city_rank);
 		this.render_battery(data.battery_mix);
-		this.render_ring(data.kpi);
+		this.render_health(data.kpi, data.battery_health_by_model);
 		this.render_rank($("#rank-channel"), data.channel_rank, "#22D3EE");
 		this.render_ticker(data.recent_events);
 		this.$viewport.find("#ug-updated").text(`更新于 ${data.generated_at}`);
@@ -257,28 +257,79 @@ class UserGrowthDashboard {
 	}
 
 	render_kpi(kpi) {
+		// KPI 按「用户规模 → 用户健康 → 用户价值」三层组织（参考数据指标体系方法论）
 		const fmt = (v) => (v === null || v === undefined ? "—" : Number(v).toLocaleString());
 		const pct = (v) => (v === null || v === undefined ? "—" : `${Number(v).toFixed(2)}%`);
 		const money = (v) =>
-			Math.abs(v) >= 10000 ? `${(v / 10000).toFixed(1)} 万` : Number(v).toLocaleString();
+			v === null || v === undefined
+				? "—"
+				: `¥${Math.abs(v) >= 10000 ? `${(v / 10000).toFixed(1)} 万` : Number(v).toLocaleString()}`;
 
-		const items = [
-			{ label: "在租客户", value: fmt(kpi.active_customers), unit: "家", tone: "cyan" },
-			{ label: "在租电池", value: fmt(kpi.active_battery), unit: "块", tone: "green" },
-			{ label: "本月新增", value: `+${fmt(kpi.new_month)}`, unit: "家", tone: "green" },
-			{ label: "本月中止", value: `-${fmt(kpi.churn_month)}`, unit: "家", tone: "red" },
-			{ label: "净增长", value: fmt(kpi.net_month), unit: "家", tone: kpi.net_month >= 0 ? "green" : "red" },
-			{ label: "中止率", value: pct(kpi.churn_rate), unit: "", tone: kpi.churn_rate > 8 ? "red" : "amber" },
-			{ label: "在租月租", value: money(kpi.monthly_fee), unit: "元/月", tone: "cyan" },
-			{ label: "未归还电池", value: fmt(kpi.unreturned_battery), unit: "块", tone: kpi.unreturned_battery ? "red" : "green" },
+		const groups = [
+			{
+				title: "用户规模",
+				color: "cyan",
+				items: [
+					{ label: "在租客户", value: fmt(kpi.active_customers), unit: "家", tone: "cyan" },
+					{ label: "在租电池", value: fmt(kpi.active_battery), unit: "块", tone: "green" },
+					{ label: "期间新增", value: `+${fmt(kpi.period_new)}`, unit: "家", tone: "green" },
+				],
+			},
+			{
+				title: "用户健康",
+				color: "amber",
+				items: [
+					{
+						label: "流失率(期间)",
+						value: pct(kpi.period_churn_rate),
+						unit: "",
+						tone: (kpi.period_churn_rate || 0) > 15 ? "red" : "amber",
+					},
+					{
+						label: "净增长",
+						value: fmt(kpi.period_net),
+						unit: "家",
+						tone: kpi.period_net >= 0 ? "green" : "red",
+					},
+					{
+						label: "未归还电池",
+						value: fmt(kpi.unreturned_battery),
+						unit: "块",
+						tone: kpi.unreturned_battery ? "red" : "green",
+					},
+				],
+			},
+			{
+				title: "用户价值",
+				color: "green",
+				items: [
+					{ label: "ARPU", value: money(kpi.arpu), unit: "元/月", tone: "cyan" },
+					{ label: "在租月租", value: money(kpi.monthly_fee), unit: "元/月", tone: "green" },
+					{
+						label: "复购率",
+						value: pct(kpi.repeat_rate),
+						unit: "",
+						tone: (kpi.repeat_rate || 0) >= 20 ? "green" : "amber",
+					},
+				],
+			},
 		];
 
 		this.$viewport.find("#ug-kpi-row").html(
-			items
+			groups
 				.map(
-					(it) => `<div class="ug-kpi ug-kpi-${it.tone}">
-						<div class="ug-kpi-label">${it.label}</div>
-						<div class="ug-kpi-value">${it.value}<span class="ug-kpi-unit">${it.unit}</span></div>
+					(g) => `<div class="ug-kpi-group ug-kpi-group-${g.color}">
+						<div class="ug-kpi-group-title"><i></i>${g.title}</div>
+						<div class="ug-kpi-group-body">
+							${g.items
+								.map(
+									(it) => `<div class="ug-kpi ug-kpi-${it.tone}">
+										<div class="ug-kpi-label">${it.label}</div>
+										<div class="ug-kpi-value">${it.value}<span class="ug-kpi-unit">${it.unit}</span></div>
+									</div>`
+								)
+								.join("")}
+						</div>
 					</div>`
 				)
 				.join("")
@@ -386,16 +437,16 @@ class UserGrowthDashboard {
 			series: [
 				{
 					type: "pie",
-					radius: ["40%", "66%"],
-					center: ["35%", "52%"],
-					roseType: "radius",
+					radius: ["44%", "66%"],
+					center: ["34%", "52%"],
+					itemStyle: { borderRadius: 4, borderColor: "rgba(5,15,34,.9)", borderWidth: 2 },
+					label: { show: false },
+					labelLine: { show: false },
 					data: list.map((x, i) => ({
 						name: x.label,
 						value: x.value,
 						itemStyle: { color: UG_COLORS[i % UG_COLORS.length] },
 					})),
-					label: { color: "#9BC3D9", fontSize: 9, formatter: "{b}\n{d}%" },
-					labelLine: { length: 6, length2: 6, lineStyle: { color: "#2A4A66" } },
 				},
 			],
 		});
@@ -442,77 +493,97 @@ class UserGrowthDashboard {
 
 	render_battery(list) {
 		if (!list || !list.length) return;
+		// 参考样式：环形图居左，右侧「色块 + 型号 + 数量」图例列表
 		this.chart("chart-battery", {
 			tooltip: {
 				trigger: "item",
 				backgroundColor: "rgba(8,20,34,.92)",
-				borderColor: "#34D399",
+				borderColor: "#2EE6A0",
 				textStyle: { color: "#E6F6FF" },
 			},
+			legend: {
+				orient: "vertical",
+				right: 8,
+				top: "middle",
+				itemWidth: 12,
+				itemHeight: 12,
+				itemGap: 14,
+				textStyle: { color: "#C9E4F5", fontSize: 12 },
+				formatter: (name) => {
+					const item = list.find((x) => `${x.label} ${UG_MODEL_LABEL[x.label] || ""}`.trim() === name);
+					return `${name}  ${item ? item.value : 0} 块`;
+				},
+				data: list.map((x) => `${x.label} ${UG_MODEL_LABEL[x.label] || ""}`.trim()),
+			},
+			graphic: [
+				{
+					type: "text",
+					left: "32%",
+					top: "middle",
+					style: {
+						text: "型号结构\n分布",
+						fill: "#7FA5BC",
+						fontSize: 12,
+						align: "center",
+						lineHeight: 18,
+					},
+				},
+			],
 			series: [
 				{
 					type: "pie",
-					radius: ["28%", "62%"],
-					center: ["50%", "54%"],
-					roseType: "area",
-					itemStyle: { borderRadius: 6, borderColor: "rgba(4,14,26,.9)", borderWidth: 2 },
+					radius: ["46%", "68%"],
+					center: ["32%", "52%"],
+					itemStyle: { borderRadius: 4, borderColor: "rgba(5,15,34,.9)", borderWidth: 2 },
+					label: { show: false },
+					labelLine: { show: false },
 					data: list.map((x, i) => ({
 						name: `${x.label} ${UG_MODEL_LABEL[x.label] || ""}`,
 						value: x.value,
 						itemStyle: { color: UG_COLORS[i % UG_COLORS.length] },
 					})),
-					label: { color: "#9BC3D9", fontSize: 10, formatter: "{b}\n{c} 块" },
 				},
 			],
 		});
 	}
 
-	render_ring(kpi) {
-		const rate = kpi.churn_rate || 0;
-		this.chart("chart-ring", {
-			series: [
-				{
-					type: "gauge",
-					startAngle: 210,
-					endAngle: -30,
-					min: 0,
-					max: 100,
-					radius: "92%",
-					progress: {
-						show: true,
-						width: 10,
-						itemStyle: { color: rate > 8 ? "#F87171" : "#34D399" },
-					},
-					axisLine: { lineStyle: { width: 10, color: [[1, "rgba(34,211,238,.12)"]] } },
-					axisTick: { show: false },
-					splitLine: { show: false },
-					axisLabel: { show: false },
-					pointer: { show: false },
-					anchor: { show: false },
-					detail: {
-						valueAnimation: true,
-						formatter: () => `${rate.toFixed(1)}%`,
-						color: "#E6F6FF",
-						fontSize: 26,
-						fontWeight: 700,
-						offsetCenter: [0, "-2%"],
-					},
-					data: [{ value: Math.min(rate, 100) }],
-				},
-			],
-			graphic: [
-				{
-					type: "text",
-					left: "center",
-					top: "70%",
-					style: {
-						text: `在租 ${kpi.active_customers} · 本月流失 ${kpi.churn_month}`,
-						fill: "#7FA5BC",
-						fontSize: 12,
-					},
-				},
-			],
-		});
+	render_health(kpi, by_model) {
+		// 电池健康率分布：顶部总健康率大数字 + 按型号的「已归还/未归还」双色条
+		const $el = this.$viewport.find("#health-dist");
+		const rate = kpi.battery_return_rate;
+		const unreturned = kpi.unreturned_battery || 0;
+		const due = kpi.period_lost_battery || 0;
+		const tone = rate == null ? "green" : rate < 95 ? "red" : "green";
+
+		const rows = (by_model || [])
+			.map((m) => {
+				const label = `${m.model} ${UG_MODEL_LABEL[m.model] || ""}`.trim();
+				const total = m.total || 0;
+				const retPct = total ? ((m.returned / total) * 100).toFixed(0) : 0;
+				const rRate = m.return_rate == null ? "—" : `${m.return_rate.toFixed(1)}%`;
+				const bad = m.unreturned > 0;
+				return `<div class="ug-health-row">
+					<span class="ug-health-model">${label}</span>
+					<span class="ug-health-bar">
+						<i class="ug-health-returned" style="width:${retPct}%"></i>
+						<i class="ug-health-lost" style="width:${100 - retPct}%"></i>
+					</span>
+					<span class="ug-health-rate ${bad ? "is-bad" : ""}">${rRate}</span>
+					<span class="ug-health-count">${m.returned}/${total} 块</span>
+				</div>`;
+			})
+			.join("");
+
+		$el.html(`
+			<div class="ug-health-head ug-health-${tone}">
+				<span class="ug-health-big">${rate == null ? "—" : `${rate.toFixed(1)}%`}</span>
+				<span class="ug-health-sub ${unreturned > 0 ? "is-bad" : ""}">
+					未归还 ${unreturned} 块 · 应归还 ${due} 块
+				</span>
+			</div>
+			<div class="ug-health-legend"><i class="lg-ok"></i>已归还<i class="lg-bad"></i>未归还</div>
+			${rows || '<div class="ug-health-empty">期间无中止样本</div>'}
+		`);
 	}
 
 	render_rank($el, list, color) {

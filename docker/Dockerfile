@@ -1,12 +1,12 @@
+# bench 基础镜像：内部已完成 bench init（Frappe v15），供 init / frappe 两个服务复用
+# 由 docker-compose.yml 里的 bench-base 服务自动构建，无需手动 docker build
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH=/home/frappe/.local/bin:$PATH
-ENV UV_HTTP_TIMEOUT=300
-ENV UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 
-RUN sed -i 's@//.*archive.ubuntu.com@//mirrors.tuna.tsinghua.edu.cn@g; s@//security.ubuntu.com@//mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list \
- && apt-get update \
+# 系统依赖：MariaDB 客户端、Redis、wkhtmltopdf（打印）、构建工具
+RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       curl wget ca-certificates git sudo \
       python3.10 python3.10-dev python3-pip python3.10-venv \
@@ -24,34 +24,9 @@ RUN useradd -ms /bin/bash frappe \
 USER frappe
 WORKDIR /home/frappe
 
-# Frappe v15 有两个依赖写死从 GitHub 拉特定 commit。
-# git 协议经代理转发不稳定，改用稳定得多的 tar 包下载，预置到本地。
-RUN mkdir -p /opt/vendor \
- && curl -fsSL --retry 5 --retry-delay 3 -o /tmp/pypika.tar.gz \
-      "https://gh-proxy.com/https://github.com/frappe/pypika/archive/7ef6e40215d46cd531e8c4e58650b84c11abbd04.tar.gz" \
- && curl -fsSL --retry 5 --retry-delay 3 -o /tmp/gunicorn.tar.gz \
-      "https://gh-proxy.com/https://github.com/frappe/gunicorn/archive/bb554053bb87218120d76ab6676af7015680e8b6.tar.gz" \
- && tar xzf /tmp/pypika.tar.gz  -C /opt/vendor \
- && tar xzf /tmp/gunicorn.tar.gz -C /opt/vendor \
- && mv /opt/vendor/pypika-7ef6e40215d46cd531e8c4e58650b84c11abbd04  /opt/vendor/pypika \
- && mv /opt/vendor/gunicorn-bb554053bb87218120d76ab6676af7015680e8b6 /opt/vendor/gunicorn \
- && rm -f /tmp/*.tar.gz
-
-RUN pip3 install --user --no-cache-dir frappe-bench==5.31.1
-
-# 从 Gitee 镜像克隆 Frappe v15 源码
-RUN git clone --depth 1 --branch version-15 \
-      https://gitee.com/mirrors/frappe.git /home/frappe/frappe-src
-
-# 把 pyproject 里两个 git 依赖改写为本地路径，uv 安装时不再访问任何 GitHub
-RUN cd /home/frappe/frappe-src \
- && sed -i 's@"PyPika @ git+https://github.com/frappe/pypika@7ef6e40215d46cd531e8c4e58650b84c11abbd04"@"PyPika @ file:///opt/vendor/pypika"@' pyproject.toml \
- && sed -i 's@"gunicorn @ git+https://github.com/frappe/gunicorn@bb554053bb87218120d76ab6676af7015680e8b6"@"gunicorn @ file:///opt/vendor/gunicorn"@' pyproject.toml \
- && grep -c "file:///opt/vendor" pyproject.toml
-
-RUN bench init --frappe-branch version-15 \
-      --frappe-path /home/frappe/frappe-src \
-      --skip-assets --skip-redis-config-generation frappe-bench \
+# bench CLI + Frappe v15（--skip-assets：assets 在 install-app 后按需构建，避免构建阶段长时间编译）
+RUN pip3 install --user --no-cache-dir frappe-bench==5.24.0 \
+ && bench init --frappe-branch version-15 --skip-assets --skip-redis-config-generation frappe-bench \
  && cd frappe-bench \
  && bench set-config -g db_host mariadb \
  && bench set-config -g redis_cache redis://redis:6379/1 \
