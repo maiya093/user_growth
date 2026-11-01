@@ -5,6 +5,12 @@
 ![Frappe](https://img.shields.io/badge/Frappe-v15-0089FF)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+## 效果预览
+
+| 用户增长数据大屏 | 用户增长分析报表 | 单据列表 |
+| --- | --- | --- |
+| ![大屏](docs/screenshots/dashboard.png) | ![报表](docs/screenshots/report.png) | ![列表](docs/screenshots/doctype.png) |
+
 ---
 
 ## 一、这个 App 做了什么

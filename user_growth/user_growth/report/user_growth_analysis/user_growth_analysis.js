@@ -7,6 +7,18 @@
 // 3) 顶部展示口径说明，并给净增长、中止率加颜色规则。
 
 frappe.query_reports["User Growth Analysis"] = {
+	// 导出按钮：按当前过滤器导出月度明细 CSV（与大屏共用后端接口）
+	onload(report) {
+		report.page.add_inner_button(__("导出 CSV"), () => {
+			const values = report.get_values();
+			const region = values.region_select || values.region || "";
+			window.open(
+				`/api/method/user_growth.user_growth.utils.analytics.export_growth_csv?months=${values.months}&region=${encodeURIComponent(region)}`,
+				"_blank"
+			);
+		});
+	},
+
 	filters: [
 		{
 			fieldname: "months",

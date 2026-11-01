@@ -393,6 +393,68 @@ def mask_name(name):
 # 大屏快照：一次请求返回全部区块，保证同一帧数据一致
 # ----------------------------------------------------------------------
 @frappe.whitelist()
+def export_growth_csv(months=12, region=None):
+	"""导出用户增长月度明细为 CSV（Excel 可直接打开，含 BOM 头）。
+
+	大屏「导出」按钮与报表页共用本接口，口径与 get_growth_summary 完全一致。
+	"""
+	if not frappe.session.user or frappe.session.user == "Guest":
+		frappe.throw("请先登录", frappe.PermissionError)
+
+	months = int(months or 12)
+	filters = {"region": region} if region else {}
+	summary = get_growth_summary(filters, months=months)
+
+	headers = [
+		"月份",
+		"期初在租",
+		"新增客户",
+		"中止客户",
+		"净增长",
+		"期末在租",
+		"中止率(%)",
+		"新增电池(块)",
+		"回收电池(块)",
+		"在租电池(块)",
+		"新增月租(元)",
+		"中止月租(元)",
+		"净月租(元)",
+	]
+
+	import csv
+	import io
+
+	buf = io.StringIO()
+	writer = csv.writer(buf)
+	writer.writerow(headers)
+	for t in summary:
+		writer.writerow(
+			[
+				t["month"],
+				t["opening"],
+				t["new"],
+				t["churn"],
+				t["net"],
+				t["closing"],
+				round(t["churn_rate"], 2) if t["churn_rate"] is not None else "",
+				t["new_battery"],
+				t["lost_battery"],
+				t["closing_battery"],
+				round(t["new_fee"], 2),
+				round(t["lost_fee"], 2),
+				round(t["new_fee"] - t["lost_fee"], 2),
+			]
+		)
+
+	# BOM 头：保证 Excel 打开中文不乱码
+	csv_data = "﻿" + buf.getvalue()
+	filename = f"用户增长月度明细_{months}个月_{now_datetime().strftime('%Y%m%d_%H%M')}.csv"
+	frappe.local.response["filecontent"] = csv_data.encode("utf-8")
+	frappe.local.response["type"] = "download"
+	frappe.local.response["filename"] = filename
+
+
+@frappe.whitelist()
 def get_dashboard_snapshot(months=12, region=None):
 	if not frappe.session.user or frappe.session.user == "Guest":
 		frappe.throw("请先登录", frappe.PermissionError)
